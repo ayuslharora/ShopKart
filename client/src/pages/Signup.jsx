@@ -1,52 +1,76 @@
 import Logo from '../components/Logo'
-import './Auth.css'
 
 export default function Signup() {
   return (
-    <div className="auth-screen auth-screen-reverse">
-      <main className="auth-panel">
-        <div className="auth-form-wrap">
-          <span className="auth-eyebrow">Sign up</span>
-          <h2 className="auth-title">Set up your stall pass</h2>
-          <p className="auth-subtitle">
-            Already have an account? <a href="/login">Log in</a>
+    <div className="grid min-h-svh grid-cols-2 max-[860px]:grid-cols-1">
+      <main className="flex items-center justify-center bg-paper p-12 max-[860px]:p-7 max-[860px]:pb-14">
+        <div className="w-full max-w-[380px]">
+          <span className="text-[13px] font-bold text-brick">Sign up</span>
+          <h2 className="mt-2.5 text-[32px]">Set up your stall pass</h2>
+          <p className="mt-2.5 text-[14.5px] text-ink-soft">
+            Already have an account?{' '}
+            <a href="/login" className="font-bold text-ink underline underline-offset-2">
+              Log in
+            </a>
           </p>
 
-          <form className="auth-form">
-            <label className="field">
-              <span>Full name</span>
-              <input type="text" placeholder="Ayush Arora" autoComplete="name" />
+          <form className="mt-8 flex flex-col gap-4.5">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[13.5px] font-bold">Full name</span>
+              <input
+                type="text"
+                placeholder="Ayush Arora"
+                autoComplete="name"
+                className="rounded-lg border-[1.5px] border-line-strong bg-cream px-3.5 py-3.5 text-[15px] text-ink outline-none placeholder:text-ink-soft placeholder:opacity-65 focus-visible:border-ink"
+              />
             </label>
 
-            <label className="field">
-              <span>Username</span>
-              <input type="text" placeholder="ayush.arora" autoComplete="username" />
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[13.5px] font-bold">Username</span>
+              <input
+                type="text"
+                placeholder="ayush.arora"
+                autoComplete="username"
+                className="rounded-lg border-[1.5px] border-line-strong bg-cream px-3.5 py-3.5 text-[15px] text-ink outline-none placeholder:text-ink-soft placeholder:opacity-65 focus-visible:border-ink"
+              />
             </label>
 
-            <label className="field">
-              <span>Email</span>
-              <input type="email" placeholder="you@example.com" autoComplete="email" />
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[13.5px] font-bold">Email</span>
+              <input
+                type="email"
+                placeholder="you@example.com"
+                autoComplete="email"
+                className="rounded-lg border-[1.5px] border-line-strong bg-cream px-3.5 py-3.5 text-[15px] text-ink outline-none placeholder:text-ink-soft placeholder:opacity-65 focus-visible:border-ink"
+              />
             </label>
 
-            <label className="field">
-              <span>Password</span>
-              <input type="password" placeholder="At least 7 characters" autoComplete="new-password" />
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[13.5px] font-bold">Password</span>
+              <input
+                type="password"
+                placeholder="At least 7 characters"
+                autoComplete="new-password"
+                className="rounded-lg border-[1.5px] border-line-strong bg-cream px-3.5 py-3.5 text-[15px] text-ink outline-none placeholder:text-ink-soft placeholder:opacity-65 focus-visible:border-ink"
+              />
             </label>
 
-            <button type="submit" className="btn btn-primary btn-block">
+            <button type="submit" className="btn btn-primary btn-block mt-2">
               Create account
             </button>
           </form>
         </div>
       </main>
 
-      <aside className="auth-brand auth-brand-marigold">
+      <aside className="flex flex-col justify-between bg-marigold p-12 text-ink max-[860px]:p-9">
         <Logo variant="light" />
-        <div className="auth-brand-copy">
-          <h1>Join the stall.</h1>
-          <p>One account for every seller on ShopKart — set up in under a minute.</p>
+        <div>
+          <h1 className="max-w-[12ch] text-[44px] leading-[1.1] max-[860px]:text-[32px]">Join the stall.</h1>
+          <p className="mt-4.5 max-w-[34ch] text-base leading-relaxed opacity-82">
+            One account for every seller on ShopKart — set up in under a minute.
+          </p>
         </div>
-        <span className="auth-stub">practice project — no real orders</span>
+        <span className="text-[12.5px] opacity-55">practice project — no real orders</span>
       </aside>
     </div>
   )
