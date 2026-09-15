@@ -1,0 +1,156 @@
+.auth-screen {
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.auth-screen-reverse {
+  direction: rtl;
+}
+
+.auth-screen-reverse > * {
+  direction: ltr;
+}
+
+.auth-brand {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px;
+  color: var(--paper);
+}
+
+.auth-brand-dark {
+  background: var(--ink);
+}
+
+.auth-brand-marigold {
+  background: var(--marigold);
+  color: var(--ink);
+}
+
+.auth-brand-copy h1 {
+  font-size: 44px;
+  line-height: 1.1;
+  max-width: 12ch;
+}
+
+.auth-brand-copy p {
+  margin-top: 18px;
+  max-width: 34ch;
+  font-size: 16px;
+  line-height: 1.6;
+  opacity: 0.82;
+}
+
+.auth-stub {
+  font-size: 12.5px;
+  opacity: 0.55;
+}
+
+.auth-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  background: var(--paper);
+}
+
+.auth-form-wrap {
+  width: 100%;
+  max-width: 380px;
+}
+
+.auth-eyebrow {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brick);
+}
+
+.auth-title {
+  margin-top: 10px;
+  font-size: 32px;
+}
+
+.auth-subtitle {
+  margin-top: 10px;
+  font-size: 14.5px;
+  color: var(--ink-soft);
+}
+
+.auth-subtitle a {
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.auth-form {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.field span {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.field input {
+  border: 1.5px solid var(--line-strong);
+  background: var(--cream);
+  border-radius: 8px;
+  padding: 13px 14px;
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.field input::placeholder {
+  color: var(--ink-soft);
+  opacity: 0.65;
+}
+
+.field input:focus-visible {
+  border-color: var(--ink);
+}
+
+.auth-forgot {
+  align-self: flex-end;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-top: -8px;
+}
+
+.auth-forgot:hover {
+  color: var(--ink);
+}
+
+.auth-form .btn-block {
+  margin-top: 8px;
+}
+
+@media (max-width: 860px) {
+  .auth-screen,
+  .auth-screen-reverse {
+    grid-template-columns: 1fr;
+  }
+  .auth-brand {
+    padding: 36px 28px;
+  }
+  .auth-brand-copy h1 {
+    font-size: 32px;
+  }
+  .auth-panel {
+    padding: 40px 28px 56px;
+  }
+}
