@@ -36,9 +36,18 @@ const userScheme = mongoose.Schema(
             type: String,
             default: "",
         },
-        orders: {
+        wishlist: {
             type: [mongoose.Schema.Types.ObjectId],
-            ref: "Order",
+            ref: "Product",
+            default: [],
+        },
+        recentlyViewed: {
+            type: [
+                {
+                    product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+                    viewedAt: { type: Date, default: Date.now },
+                },
+            ],
             default: [],
         },
     },

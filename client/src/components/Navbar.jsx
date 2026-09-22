@@ -67,12 +67,13 @@ export default function Navbar({ variant = 'light', search = false, cartCount = 
                   </span>
                 )}
               </button>
-              <div
-                aria-hidden="true"
+              <a
+                href="/profile"
+                aria-label="Profile"
                 className="inline-flex h-8.5 w-8.5 items-center justify-center rounded-full bg-marigold text-sm font-extrabold text-ink"
               >
                 A
-              </div>
+              </a>
             </>
           ) : (
             <>

@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
             try {
                 const response = await axiosInstance.get('/users/me')
                 if (!mounted) return
-                setUser(response.data.AuthUser)
+                setUser(response.data)
             } catch (error) {
                 if (!mounted) return
                 setUser(null)

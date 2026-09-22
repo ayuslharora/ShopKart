@@ -1,6 +1,9 @@
 import bcrypt from 'bcrypt'
 import User from '../models/Users.model.js'
+import Order from '../models/Order.model.js'
 import {genToken} from '../util/genToken.js'
+
+const RECENT_ORDERS_LIMIT = 5
 
 const cookieOptions = {
     //what does this means
@@ -51,7 +54,10 @@ export const registerUser = async (req,res)=>{
 
         res.cookie('token',token,cookieOptions)
 
-        res.status(201).json({ message: 'User Registered', user: newUser })
+        const userResponse = newUser.toObject()
+        delete userResponse.password
+
+        res.status(201).json({ message: 'User Registered', user: userResponse })
 
     }
     catch(err){
@@ -101,6 +107,58 @@ export const logout = async (req, res) => {
 }
 
 export const getMe = async(req,res)=>{
-    const AuthUser = req.user
-    res.status(200).json({AuthUser})
+    res.status(200).json(req.user)
+}
+
+export const getProfileOverview = async (req, res) => {
+    try {
+        const userId = req.user._id
+
+        const [orderCount, recentOrders, userWithLists] = await Promise.all([
+            Order.countDocuments({ buyer: userId }),
+            Order.find({ buyer: userId })
+                .sort({ createdAt: -1 })
+                .limit(RECENT_ORDERS_LIMIT)
+                .populate('product', 'name imageUrl price'),
+            User.findById(userId)
+                .select('wishlist recentlyViewed')
+                .populate('wishlist', 'name imageUrl price category')
+                .populate('recentlyViewed.product', 'name imageUrl price category'),
+        ])
+
+        const recentlyViewed = userWithLists.recentlyViewed
+            .filter((entry) => entry.product)
+            .sort((a, b) => new Date(b.viewedAt) - new Date(a.viewedAt))
+            .map((entry) => ({ product: entry.product, viewedAt: entry.viewedAt }))
+
+        res.status(200).json({
+            orderCount,
+            recentOrders,
+            recentlyViewed,
+            wishlist: userWithLists.wishlist,
+        })
+    } catch (err) {
+        res.status(500).json({ message: 'Server crashed', error: err.message })
+    }
+}
+
+export const toggleWishlist = async (req, res) => {
+    try {
+        const { productId } = req.params
+        const user = await User.findById(req.user._id)
+
+        const alreadySaved = user.wishlist.some((id) => id.toString() === productId)
+
+        if (alreadySaved) {
+            user.wishlist = user.wishlist.filter((id) => id.toString() !== productId)
+        } else {
+            user.wishlist.push(productId)
+        }
+
+        await user.save()
+
+        res.status(200).json({ wishlist: user.wishlist, saved: !alreadySaved })
+    } catch (err) {
+        res.status(500).json({ message: 'Server crashed', error: err.message })
+    }
 }
