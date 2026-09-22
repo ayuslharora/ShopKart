@@ -90,7 +90,17 @@ export const login = async (req,res)=>{
     }
 }
 
+
+export const logout = async (req, res) => {
+    try {
+        res.clearCookie('token', cookieOptions)
+        res.status(200).json({ message: 'Logged out' })
+    } catch (err) {
+        res.status(500).json({ message: 'Server crashed', error: err.message })
+    }
+}
+
 export const getMe = async(req,res)=>{
-    const AuthUser = req.user 
+    const AuthUser = req.user
     res.status(200).json({AuthUser})
 }

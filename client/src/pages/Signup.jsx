@@ -1,6 +1,34 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo'
+import { axiosInstance } from '../axiosCalls/axios'
 
 export default function Signup() {
+  const [form, setForm] = useState({ name: '', username: '', email: '', password: '' })
+  const [loader, setLoader] = useState(false)
+  const [err, setErr] = useState('')
+  const navigate = useNavigate()
+
+  const handleChange = (e) => {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+    setErr('')
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoader(true)
+    setErr('')
+
+    try {
+      await axiosInstance.post('/users/register', form)
+      navigate('/home', { replace: true })
+    } catch (error) {
+      setErr(error.response?.data?.message || 'Unable to create your account. Please try again.')
+    } finally {
+      setLoader(false)
+    }
+  }
+
   return (
     <div className="grid min-h-svh grid-cols-2 max-[860px]:grid-cols-1">
       <main className="flex items-center justify-center bg-paper p-12 max-[860px]:p-7 max-[860px]:pb-14">
@@ -14,13 +42,16 @@ export default function Signup() {
             </a>
           </p>
 
-          <form className="mt-8 flex flex-col gap-4.5">
+          <form className="mt-8 flex flex-col gap-4.5" onSubmit={handleSubmit}>
             <label className="flex flex-col gap-1.5">
               <span className="text-[13.5px] font-bold">Full name</span>
               <input
                 type="text"
+                name="name"
                 placeholder="Ayush Arora"
                 autoComplete="name"
+                value={form.name}
+                onChange={handleChange}
                 className="rounded-lg border-[1.5px] border-line-strong bg-cream px-3.5 py-3.5 text-[15px] text-ink outline-none placeholder:text-ink-soft placeholder:opacity-65 focus-visible:border-ink"
               />
             </label>
@@ -29,8 +60,11 @@ export default function Signup() {
               <span className="text-[13.5px] font-bold">Username</span>
               <input
                 type="text"
+                name="username"
                 placeholder="ayush.arora"
                 autoComplete="username"
+                value={form.username}
+                onChange={handleChange}
                 className="rounded-lg border-[1.5px] border-line-strong bg-cream px-3.5 py-3.5 text-[15px] text-ink outline-none placeholder:text-ink-soft placeholder:opacity-65 focus-visible:border-ink"
               />
             </label>
@@ -39,8 +73,11 @@ export default function Signup() {
               <span className="text-[13.5px] font-bold">Email</span>
               <input
                 type="email"
+                name="email"
                 placeholder="you@example.com"
                 autoComplete="email"
+                value={form.email}
+                onChange={handleChange}
                 className="rounded-lg border-[1.5px] border-line-strong bg-cream px-3.5 py-3.5 text-[15px] text-ink outline-none placeholder:text-ink-soft placeholder:opacity-65 focus-visible:border-ink"
               />
             </label>
@@ -49,14 +86,19 @@ export default function Signup() {
               <span className="text-[13.5px] font-bold">Password</span>
               <input
                 type="password"
+                name="password"
                 placeholder="At least 7 characters"
                 autoComplete="new-password"
+                value={form.password}
+                onChange={handleChange}
                 className="rounded-lg border-[1.5px] border-line-strong bg-cream px-3.5 py-3.5 text-[15px] text-ink outline-none placeholder:text-ink-soft placeholder:opacity-65 focus-visible:border-ink"
               />
             </label>
 
-            <button type="submit" className="btn btn-primary btn-block mt-2">
-              Create account
+            {err && <p className="text-[13.5px] font-medium text-brick">{err}</p>}
+
+            <button type="submit" disabled={loader} className="btn btn-primary btn-block mt-2 disabled:opacity-60">
+              {loader ? 'Creating account…' : 'Create account'}
             </button>
           </form>
         </div>

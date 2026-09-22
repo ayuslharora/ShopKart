@@ -1,6 +1,38 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo'
+import { axiosInstance } from '../axiosCalls/axios'
+import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
+  const [form, setForm] = useState({ email: '', password: '' })
+  const [loader, setLoader] = useState(false)
+  const [err, setErr] = useState('')
+  const navigate = useNavigate()
+  const { setUser } = useAuth()
+
+  const handleChange = (e) => {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+    setErr('')
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoader(true)
+    setErr('')
+
+    try {
+      await axiosInstance.post('/users/login', form)
+      const { data } = await axiosInstance.get('/users/me')
+      setUser(data)
+      navigate('/home', { replace: true })
+    } catch (error) {
+      setErr(error.response?.data?.message || 'Invalid email or password.')
+    } finally {
+      setLoader(false)
+    }
+  }
+
   return (
     <div className="grid min-h-svh grid-cols-2 max-[860px]:grid-cols-1">
       <aside className="flex flex-col justify-between bg-ink p-12 text-paper max-[860px]:p-9">
@@ -27,13 +59,16 @@ export default function Login() {
             </a>
           </p>
 
-          <form className="mt-8 flex flex-col gap-4.5">
+          <form className="mt-8 flex flex-col gap-4.5" onSubmit={handleSubmit}>
             <label className="flex flex-col gap-1.5">
               <span className="text-[13.5px] font-bold">Email</span>
               <input
                 type="email"
+                name="email"
                 placeholder="you@example.com"
                 autoComplete="email"
+                value={form.email}
+                onChange={handleChange}
                 className="rounded-lg border-[1.5px] border-line-strong bg-cream px-3.5 py-3.5 text-[15px] text-ink outline-none placeholder:text-ink-soft placeholder:opacity-65 focus-visible:border-ink"
               />
             </label>
@@ -42,8 +77,11 @@ export default function Login() {
               <span className="text-[13.5px] font-bold">Password</span>
               <input
                 type="password"
+                name="password"
                 placeholder="••••••••"
                 autoComplete="current-password"
+                value={form.password}
+                onChange={handleChange}
                 className="rounded-lg border-[1.5px] border-line-strong bg-cream px-3.5 py-3.5 text-[15px] text-ink outline-none placeholder:text-ink-soft placeholder:opacity-65 focus-visible:border-ink"
               />
             </label>
@@ -52,8 +90,10 @@ export default function Login() {
               Forgot password?
             </a>
 
-            <button type="submit" className="btn btn-primary btn-block mt-2">
-              Log in
+            {err && <p className="text-[13.5px] font-medium text-brick">{err}</p>}
+
+            <button type="submit" disabled={loader} className="btn btn-primary btn-block mt-2 disabled:opacity-60">
+              {loader ? 'Logging in…' : 'Log in'}
             </button>
           </form>
         </div>

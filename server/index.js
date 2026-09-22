@@ -3,6 +3,7 @@ import mongoose from "mongoose"
 import dotenv from 'dotenv'
 import userRoutes from './routes/user.route.js'
 import cookieParser from "cookie-parser"
+import cors from 'cors'
 
 const app = express();
 
@@ -10,17 +11,23 @@ const PORT = 8000
 
 dotenv.config();
 
-mongoose.connect(process.env.DBUrl).then(()=>{
+mongoose.connect(process.env.DBUrl).then(() => {
     console.log("DB Connected");
-}).catch((err)=>{
+}).catch((err) => {
     console.log(err);
 })
 
+app.use(cors(
+    {
+        origin: "http://localhost:5174",
+        credentials: true,
+    }
+))
 app.use(express.json())
 app.use(cookieParser())
 
 
-app.use('/users' , userRoutes)
+app.use('/users', userRoutes)
 
 
 app.get('/', (req, res) => {
@@ -28,6 +35,6 @@ app.get('/', (req, res) => {
 })
 
 
-app.listen(PORT,()=>{
+app.listen(PORT, () => {
     console.log(`Server running on PORT ${PORT}`);
 })
