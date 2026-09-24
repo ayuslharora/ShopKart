@@ -16,7 +16,7 @@ export default function ProductCard({ _id, name, category, price, oldPrice, disc
 
   return (
     <Link
-      to={`/product/${_id}`}
+      to={`/products/${_id}`}
       className="block overflow-hidden border-[1.5px] border-line bg-cream transition-colors hover:border-line-strong"
     >
       <div

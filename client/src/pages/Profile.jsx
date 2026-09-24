@@ -23,7 +23,7 @@ function ProductStrip({ items, empty, renderMeta }) {
       {items.map(({ product, meta, key }) => (
         <Link
           key={key}
-          to={`/product/${product._id}`}
+          to={`/products/${product._id}`}
           className="block overflow-hidden border-[1.5px] border-line bg-cream transition-colors hover:border-line-strong"
         >
           <div
@@ -137,7 +137,7 @@ export default function Profile() {
                     {overview.recentOrders.map((order) => (
                       <Link
                         key={order._id}
-                        to={`/product/${order.product?._id}`}
+                        to={`/products/${order.product?._id}`}
                         className="flex items-center justify-between gap-4 rounded-xl border-[1.5px] border-line-strong bg-cream p-4 transition-colors hover:border-line-strong"
                       >
                         <div className="flex items-center gap-3.5">

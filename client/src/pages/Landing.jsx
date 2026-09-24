@@ -1,16 +1,37 @@
+import { useEffect, useState } from 'react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import ProductCard from '../components/ProductCard'
+import Loading from '../components/Loading'
+import { axiosInstance } from '../axiosCalls/axios'
 
 const categories = ['Groceries', 'Fashion', 'Home & living', 'Electronics', 'Beauty', 'Deals']
 
-const picks = [
-  { name: 'Woven market tote', category: 'Home & living', price: 799, oldPrice: 999, tone: 'marigold', discount: 20 },
-  { name: 'Terracotta spice set', category: 'Groceries', price: 549, tone: 'brick' },
-  { name: 'Recycled cotton throw', category: 'Home & living', price: 1299, oldPrice: 1599, tone: 'leaf', discount: 19 },
-]
-
 export default function Landing() {
+  const [picks, setPicks] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+
+    const fetchPicks = async () => {
+      try {
+        const { data } = await axiosInstance.get('/products')
+        if (mounted) setPicks(data.slice(0, 3))
+      } catch (error) {
+        if (mounted) setPicks([])
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+
+    fetchPicks()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
   return (
     <div className="flex min-h-svh flex-col">
       <Navbar variant="dark" />
@@ -59,11 +80,15 @@ export default function Landing() {
             <h2 className="text-[32px]">Today's picks</h2>
             <p className="mt-2 text-[15.5px] text-ink-soft">Fresh listings from sellers near you</p>
           </div>
-          <div className="grid grid-cols-3 gap-6 max-[900px]:grid-cols-1">
-            {picks.map((p) => (
-              <ProductCard key={p.name} {...p} />
-            ))}
-          </div>
+          {loading ? (
+            <Loading />
+          ) : (
+            <div className="grid grid-cols-3 gap-6 max-[900px]:grid-cols-1">
+              {picks.map((p) => (
+                <ProductCard key={p._id} {...p} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

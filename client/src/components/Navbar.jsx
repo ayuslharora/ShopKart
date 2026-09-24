@@ -1,12 +1,12 @@
 import Logo from './Logo'
 
 const links = [
-  { label: 'Shop', href: '#' },
-  { label: 'Categories', href: '#' },
-  { label: 'Deals', href: '#' },
+  { label: 'Shop', href: '/products' },
+  { label: 'Categories', href: '/products' },
+  { label: 'Deals', href: '/products' },
 ]
 
-export default function Navbar({ variant = 'light', search = false, cartCount = 0 }) {
+export default function Navbar({ variant = 'light', search = false, cartCount = 0, searchValue, onSearchChange }) {
   const dark = variant === 'dark'
 
   return (
@@ -28,6 +28,8 @@ export default function Navbar({ variant = 'light', search = false, cartCount = 
               type="text"
               placeholder="Search for anything"
               aria-label="Search products"
+              value={searchValue ?? undefined}
+              onChange={onSearchChange ? (e) => onSearchChange(e.target.value) : undefined}
               className="flex-1 border-0 bg-transparent text-[14.5px] text-ink outline-none placeholder:text-ink-soft placeholder:opacity-70"
             />
           </div>
