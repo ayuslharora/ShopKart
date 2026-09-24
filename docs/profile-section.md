@@ -90,3 +90,115 @@ introduced by the same code paths, so they were fixed in place:
   model "Seller"` because nothing in the running server process imported
   `Seller.model.js` (it was only ever imported by the separate `seed.js`
   process). Fixed by importing the model file in `product.controller.js`.
+
+---
+
+# Lab 1–3 Compliance Pass
+
+After the profile section was done, the project was audited against three
+external lab problem statements (Lab-01 Customer Auth, Lab-02 Login → Home
+Flow, Lab-03 Product Catalog & Discovery). This section documents the gaps
+found and what was built to close them. Note: routes stayed under `/users`
+and `/orders` rather than being renamed to `/customers`, since that's a
+naming difference only, not a functional gap.
+
+## Audit findings (before this pass)
+
+- No `POST /products` endpoint existed at all — only `GET /products` and
+  `GET /products/:id`.
+- `GET /products` ignored query parameters — no search, no category filter.
+- No dedicated `/products` listing page; the catalog lived on `/home`.
+- The product detail route was `/product/:id` (singular), not `/products/:id`
+  as the lab spec's routing table expects.
+- `/home` showed the product catalog instead of the logged-in customer's own
+  info (name/email), which is what Lab-02 actually asks for.
+- No error state ("Something went wrong…") or empty state ("No products
+  found.") on any product listing — a failed fetch just silently showed
+  nothing.
+- The search bar in `Navbar` and the category rail on `Home` were both
+  decorative, wired to nothing.
+
+## POST /products + search/filter (server)
+
+**`server/controllers/product.controller.js`**
+- Added `createProduct`: validates `name`, `description`, `category`, and an
+  image (`image` or `imageUrl`, either key accepted) are present, `price > 0`,
+  `stock >= 0`, then creates the product and returns `201`. Left as an open
+  (unauthenticated) endpoint, matching the lab's explicit note that
+  admin/auth for product creation comes in a later lab.
+- `getProducts` now reads `search` and `category` from `req.query` and builds
+  the Mongo filter dynamically: `search` does a case-insensitive substring
+  match on `name`, `category` does a case-insensitive exact match, and both
+  can be combined. User-supplied text is regex-escaped first so someone can't
+  break or hijack the match with regex metacharacters.
+
+**`server/models/Product.model.js`**
+- `seller` changed from required to optional, since the lab's create-product
+  request body has no seller field. Products made via this endpoint simply
+  won't have one.
+
+**`server/routes/product.route.js`**
+- Added `POST /` (before `GET /`) wired to `createProduct`, no auth
+  middleware.
+
+This was manually tested by the user directly in Postman against the lab's
+exact request shape before the frontend work started.
+
+## Dedicated /products page + working search/filter (frontend)
+
+**`client/src/pages/Products.jsx`** (new)
+- Category buttons down the side (`All`, `Groceries`, `Fashion`, …) that set
+  `?category=` on the API call.
+- The search field lives in `Navbar` (see below) rather than a second input
+  on the page itself, to avoid two search boxes stacked on top of each other.
+- Debounces both search and category changes by 300ms before calling the
+  API, so typing doesn't fire a request per keystroke.
+- Three explicit UI states: `loading` (shared `Loading` component), `error`
+  ("Something went wrong while loading products."), and `ready` with either
+  the product grid or "No products found." if the array comes back empty.
+
+**`client/src/components/Navbar.jsx`**
+- The search `<input>` was previously uncontrolled and did nothing. It now
+  accepts optional `searchValue`/`onSearchChange` props and becomes a
+  controlled field when a page supplies them (currently only `Products.jsx`
+  does); other pages that render `search` keep the old decorative behavior
+  since they don't pass those props.
+- "Shop"/"Categories"/"Deals" links now point at `/products` instead of `#`.
+
+**`client/src/App.jsx`**
+- Added `/products` (private route, renders `Products.jsx`).
+- Renamed the product detail route from `/product/:id` to `/products/:id`.
+
+**Link updates** — `ProductCard.jsx` and `Profile.jsx`'s recent-orders/
+recently-viewed/wishlist links updated from `/product/${id}` to
+`/products/${id}` to match the renamed route.
+
+## Home rebuilt as the Lab-02 welcome page
+
+**`client/src/pages/Home.jsx`** — replaced the product-catalog content
+(which now lives at `/products`) with a welcome page: greets the user by
+name and shows their name/email in a card, with a button linking to
+`/products`. The lab spec also asks for a `phone` field, which doesn't exist
+on this project's `User` model (`fullName`/`phone` were never added — the
+model uses `name`/`username`/`email`), so it was left out rather than
+fabricated.
+
+## Landing page: real data instead of mock data
+
+**`client/src/pages/Landing.jsx`** — the "Today's picks" section previously
+rendered a hardcoded 3-item `picks` array. It now fetches `/products` on
+mount and shows the first 3 real products, with the shared `Loading`
+component while the request is in flight. (The "12,400+ sellers" stat was
+deliberately left as marketing copy — there's no seller-count endpoint, and
+the app already carries a "practice project" disclaimer in the footer.)
+
+## Remaining known gaps (not yet closed)
+
+- `GET /products/:id` still returns `500` for a malformed MongoDB ObjectId
+  instead of the `400` the lab spec asks for (a `CastError` falls through to
+  the generic catch block).
+- No `PATCH /customers/change-password` (Lab-01 bonus).
+- No `?sort=price_asc` / `?sort=price_desc` on `GET /products` (Lab-03
+  bonus).
+- Routes are under `/users`/`/orders`, not renamed to `/customers` — a
+  cosmetic mismatch with Lab-01/02's exact route names, not a functional one.
