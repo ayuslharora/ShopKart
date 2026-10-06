@@ -6,6 +6,7 @@ import Home from './pages/Home'
 import Profile from './pages/Profile'
 import Products from './pages/Products'
 import ProductDetail from './pages/ProductDetail'
+import Wishlist from './pages/Wishlist'
 import PrivateRoutes from "./components/PrivateRoutes"
 import PublicRoutes from "./components/PublicRoutes"
 
@@ -21,6 +22,7 @@ function App() {
       <Route path="/profile" element={<PrivateRoutes><Profile /></PrivateRoutes>} />
       <Route path="/products" element={<PrivateRoutes><Products /></PrivateRoutes>} />
       <Route path="/products/:id" element={<ProductDetail />} />
+      <Route path="/wishlist" element={<PrivateRoutes><Wishlist /></PrivateRoutes>} />
     </Routes>
   </BrowserRouter>
 }

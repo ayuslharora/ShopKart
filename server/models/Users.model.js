@@ -37,8 +37,7 @@ const userScheme = mongoose.Schema(
             default: "",
         },
         wishlist: {
-            type: [mongoose.Schema.Types.ObjectId],
-            ref: "Product",
+            type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
             default: [],
         },
         recentlyViewed: {

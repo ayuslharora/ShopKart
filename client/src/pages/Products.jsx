@@ -12,6 +12,27 @@ export default function Products() {
   const [status, setStatus] = useState('loading') // 'loading' | 'error' | 'ready'
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
+  const [wishlistIds, setWishlistIds] = useState(() => new Set())
+
+  useEffect(() => {
+    let mounted = true
+
+    // Load which products are already saved so each card starts in the right state.
+    const fetchWishlist = async () => {
+      try {
+        const { data } = await axiosInstance.get('/wishlist')
+        if (mounted) setWishlistIds(new Set(data.wishlist.map((p) => p._id)))
+      } catch {
+        // Cards still work without this: a stale "add" gets a 409 and is corrected below.
+      }
+    }
+
+    fetchWishlist()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -39,9 +60,43 @@ export default function Products() {
     }
   }, [search, category])
 
+  const setWishlisted = (id, saved) => {
+    setWishlistIds((prev) => {
+      const next = new Set(prev)
+      if (saved) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
+  const handleToggleWishlist = async (id, wishlisted) => {
+    try {
+      if (wishlisted) {
+        await axiosInstance.delete(`/wishlist/${id}`)
+        setWishlisted(id, false)
+      } else {
+        await axiosInstance.post(`/wishlist/${id}`)
+        setWishlisted(id, true)
+      }
+    } catch (error) {
+      const status = error.response?.status
+      // 409 = already saved, 404 on remove = already gone: the server is right, sync to it.
+      if (!wishlisted && status === 409) return setWishlisted(id, true)
+      if (wishlisted && status === 404) return setWishlisted(id, false)
+      throw error
+    }
+  }
+
   return (
     <div className="flex min-h-svh flex-col">
-      <Navbar variant="light" search cartCount={3} searchValue={search} onSearchChange={setSearch} />
+      <Navbar
+        variant="light"
+        search
+        cartCount={3}
+        wishlistCount={wishlistIds.size}
+        searchValue={search}
+        onSearchChange={setSearch}
+      />
 
       <div className="wrap grid grid-cols-[200px_1fr] items-start gap-10 pt-10 pb-18 max-[1000px]:grid-cols-1">
         <aside className="sticky top-25 flex flex-col gap-2 max-[1000px]:static max-[1000px]:flex-row max-[1000px]:flex-wrap">
@@ -88,7 +143,12 @@ export default function Products() {
           {status === 'ready' && products.length > 0 && (
             <div className="grid grid-cols-4 gap-5 max-[1000px]:grid-cols-2 max-[560px]:grid-cols-1">
               {products.map((p) => (
-                <ProductCard key={p._id} {...p} />
+                <ProductCard
+                  key={p._id}
+                  {...p}
+                  wishlisted={wishlistIds.has(p._id)}
+                  onToggleWishlist={handleToggleWishlist}
+                />
               ))}
             </div>
           )}

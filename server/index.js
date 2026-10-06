@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import userRoutes from './routes/user.route.js'
 import productRoutes from './routes/product.route.js'
 import orderRoutes from './routes/order.route.js'
+import wishlistRoutes from './routes/wishlist.route.js'
 import cookieParser from "cookie-parser"
 import cors from 'cors'
 
@@ -21,7 +22,8 @@ mongoose.connect(process.env.DBUrl).then(() => {
 
 app.use(cors(
     {
-        origin: "http://localhost:5174",
+        // any localhost port (Vite picks 5173, 5174, ... depending on what's free)
+        origin: /^http:\/\/localhost:\d+$/,
         credentials: true,
     }
 ))
@@ -32,6 +34,7 @@ app.use(cookieParser())
 app.use('/users', userRoutes)
 app.use('/products', productRoutes)
 app.use('/orders', orderRoutes)
+app.use('/wishlist', wishlistRoutes)
 
 
 app.get('/', (req, res) => {

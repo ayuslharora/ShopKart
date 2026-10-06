@@ -141,24 +141,3 @@ export const getProfileOverview = async (req, res) => {
         res.status(500).json({ message: 'Server crashed', error: err.message })
     }
 }
-
-export const toggleWishlist = async (req, res) => {
-    try {
-        const { productId } = req.params
-        const user = await User.findById(req.user._id)
-
-        const alreadySaved = user.wishlist.some((id) => id.toString() === productId)
-
-        if (alreadySaved) {
-            user.wishlist = user.wishlist.filter((id) => id.toString() !== productId)
-        } else {
-            user.wishlist.push(productId)
-        }
-
-        await user.save()
-
-        res.status(200).json({ wishlist: user.wishlist, saved: !alreadySaved })
-    } catch (err) {
-        res.status(500).json({ message: 'Server crashed', error: err.message })
-    }
-}

@@ -1,8 +1,10 @@
+import { Link } from 'react-router-dom'
+
 export default function Logo({ variant = 'dark', className = '' }) {
   const light = variant === 'light'
 
   return (
-    <a href="/" className={`inline-flex items-center gap-2.5 ${className}`}>
+    <Link to="/" className={`inline-flex items-center gap-2.5 ${className}`}>
       <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
         <rect width="32" height="32" rx="7" fill="#1b1f3b" />
         <g transform="translate(16,16) rotate(-18) translate(-8.5,-8)">
@@ -16,6 +18,6 @@ export default function Logo({ variant = 'dark', className = '' }) {
       <span className={`font-display text-xl font-bold tracking-[-0.01em] ${light ? 'text-ink' : 'text-paper'}`}>
         ShopKart
       </span>
-    </a>
+    </Link>
   )
 }

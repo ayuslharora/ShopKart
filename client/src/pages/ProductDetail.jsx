@@ -15,6 +15,7 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [wishlisted, setWishlisted] = useState(false)
+  const [savingWishlist, setSavingWishlist] = useState(false)
   const [placingOrder, setPlacingOrder] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -43,16 +44,34 @@ export default function ProductDetail() {
     }
   }, [id])
 
+  useEffect(() => {
+    if (!user) return
+    let mounted = true
+
+    axiosInstance
+      .get('/wishlist')
+      .then(({ data }) => mounted && setWishlisted(data.wishlist.some((p) => p._id === id)))
+      .catch(() => {})
+
+    return () => {
+      mounted = false
+    }
+  }, [id, user])
+
   const handleToggleWishlist = async () => {
     if (!user) {
       navigate('/login')
       return
     }
+    setSavingWishlist(true)
+    setMessage('')
     try {
-      const { data } = await axiosInstance.post(`/users/wishlist/${id}`)
+      const { data } = await axiosInstance.patch(`/wishlist/${id}/toggle`)
       setWishlisted(data.saved)
-    } catch (error) {
+    } catch {
       setMessage('Could not update your wishlist. Try again.')
+    } finally {
+      setSavingWishlist(false)
     }
   }
 
@@ -134,9 +153,10 @@ export default function ProductDetail() {
             <button
               type="button"
               onClick={handleToggleWishlist}
-              className="rounded-lg border-[1.5px] border-line-strong bg-cream px-4.5 py-3 text-[14.5px] font-bold text-ink"
+              disabled={savingWishlist}
+              className="rounded-lg border-[1.5px] border-line-strong bg-cream px-4.5 py-3 text-[14.5px] font-bold text-ink disabled:opacity-60"
             >
-              {wishlisted ? 'Saved ✓' : 'Save for later'}
+              {savingWishlist ? '⏳ Saving...' : wishlisted ? '♥ Remove from Wishlist' : '♡ Add to Wishlist'}
             </button>
           </div>
         </div>

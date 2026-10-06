@@ -202,3 +202,78 @@ the app already carries a "practice project" disclaimer in the footer.)
   bonus).
 - Routes are under `/users`/`/orders`, not renamed to `/customers` — a
   cosmetic mismatch with Lab-01/02's exact route names, not a functional one.
+
+---
+
+# Lab 4 — Wishlist System
+
+Built against the Lab-04 (Wishlist System) problem statement. Per the lab,
+no Context/Redux was used — the wishlist lives in MongoDB and each page
+fetches what it needs.
+
+## Backend
+
+**`server/models/Users.model.js`**
+- `wishlist` reshaped to the lab's form: `[{ type: ObjectId, ref: 'Product' }]`,
+  default `[]`. Same data in MongoDB, so existing users keep working.
+
+**`server/controllers/wishlist.controller.js`** + **`routes/wishlist.route.js`**
+(new, mounted at `/wishlist`, every route behind `isAuthenticated` — the
+user always comes from the JWT cookie, never from the request):
+
+| Method | Endpoint | Success | Errors |
+|---|---|---|---|
+| POST | `/wishlist/:productId` | 201 | 400 bad id, 404 no product, 409 already saved |
+| GET | `/wishlist` | 200 `{ success, count, wishlist }` (populated) | 401 |
+| DELETE | `/wishlist/:productId` | 200 | 400 bad id, 404 not in wishlist |
+| PATCH | `/wishlist/:productId/toggle` (bonus) | 200 `{ saved }` | 400, 404 |
+
+- **Duplicate prevention** is done in the query itself:
+  `updateOne({ _id, wishlist: { $ne: productId } }, { $push: ... })`. If the
+  filter matches nothing, the product was already there → 409. Because the
+  check and the write are one operation, two fast clicks can't both add it
+  (verified: two concurrent POSTs → one 201, one 409, one entry).
+- **Gotcha found while testing:** the first version checked
+  `result.modifiedCount === 0` to detect "already saved". That never fires
+  here, because the User schema has `timestamps: true` and Mongoose adds an
+  `updatedAt` change to every update — so the document always counts as
+  modified. Checking `matchedCount` against a filter that encodes the
+  condition fixes it.
+- `GET /wishlist` filters out `null` entries, which is what `populate()`
+  returns for a product that was deleted after being saved.
+- The old `POST /users/wishlist/:productId` toggle was removed;
+  `ProductDetail` now uses `PATCH /wishlist/:productId/toggle`.
+
+## Frontend
+
+- **`pages/Wishlist.jsx`** (new, private route `/wishlist`) — "My Wishlist",
+  "N products saved", and three explicit states: loading ("Loading your
+  wishlist..."), error ("Unable to load your wishlist." + Try Again, which
+  re-runs the request), and empty ("Your wishlist is empty" + Browse
+  Products → `/products`).
+- **`components/WishlistCard.jsx`** (new) — image, name, category, price,
+  stock ("N units left" / "Out of stock"), View Details, Remove from
+  Wishlist (shows "Removing...", per-card error on failure).
+- **`components/ProductCard.jsx`** — now has a wishlist button when the page
+  passes `onToggleWishlist` (Landing doesn't, so guests see the plain card).
+  States: `♡ Add to Wishlist` → `⏳ Saving...` (button disabled, so no
+  duplicate requests) → `♥ Added to Wishlist`; clicking again removes it.
+  Failures show "Unable to save product. Please try again." Also shows
+  stock. The card is no longer one big `<Link>` (a button can't sit inside
+  a link), so the image and text are the link and the button sits below.
+- **`pages/Products.jsx`** — fetches `GET /wishlist` once to know which cards
+  start as saved, and calls POST/DELETE per card. A 409 on add or 404 on
+  remove means the server already has that state, so the UI syncs to it
+  instead of showing an error.
+- **`pages/ProductDetail.jsx`** — now loads whether the product is already
+  saved (it previously always showed "Save for later"), and uses the toggle
+  endpoint.
+- **`components/Navbar.jsx`** — logged-in users now get the lab's
+  `Home | Products | Wishlist | Logout` (plus cart and avatar, which now
+  shows the user's real initial instead of a hardcoded "A"). Guests on a
+  product page see Log in / Sign up instead. Wishlist link with live count
+  ("Wishlist (3)", bonus). Products/Wishlist pass the count they already
+  have so it updates instantly; other pages fetch it once. Navbar and Logo
+  links switched from `<a href>` to React Router `<Link>`, so navigating no
+  longer reloads the page.
+- **`App.jsx`** — added the `/wishlist` route.

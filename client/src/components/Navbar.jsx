@@ -1,4 +1,8 @@
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import Logo from './Logo'
+import { axiosInstance } from '../axiosCalls/axios'
+import { useAuth } from '../context/AuthContext'
 
 const links = [
   { label: 'Shop', href: '/products' },
@@ -6,8 +10,54 @@ const links = [
   { label: 'Deals', href: '/products' },
 ]
 
-export default function Navbar({ variant = 'light', search = false, cartCount = 0, searchValue, onSearchChange }) {
+const appLinks = [
+  { label: 'Home', href: '/home' },
+  { label: 'Products', href: '/products' },
+]
+
+export default function Navbar({
+  variant = 'light',
+  search = false,
+  cartCount = 0,
+  wishlistCount,
+  searchValue,
+  onSearchChange,
+}) {
   const dark = variant === 'dark'
+  const { user, setUser } = useAuth()
+  const navigate = useNavigate()
+  const [fetchedWishlistCount, setFetchedWishlistCount] = useState(null)
+  const [loggingOut, setLoggingOut] = useState(false)
+  const loggedIn = search && user
+
+  // Pages that already hold the wishlist (Products, Wishlist) pass wishlistCount so
+  // the badge updates live. Everywhere else, ask the backend for the count once.
+  useEffect(() => {
+    if (!loggedIn || wishlistCount !== undefined) return
+    let mounted = true
+
+    axiosInstance
+      .get('/wishlist')
+      .then(({ data }) => mounted && setFetchedWishlistCount(data.count))
+      .catch(() => {})
+
+    return () => {
+      mounted = false
+    }
+  }, [loggedIn, wishlistCount])
+
+  const savedCount = wishlistCount ?? fetchedWishlistCount
+
+  const handleLogout = async () => {
+    setLoggingOut(true)
+    try {
+      await axiosInstance.post('/users/logout')
+    } finally {
+      setUser(null)
+      setLoggingOut(false)
+      navigate('/login', { replace: true })
+    }
+  }
 
   return (
     <header
@@ -36,21 +86,41 @@ export default function Navbar({ variant = 'light', search = false, cartCount = 
         )}
 
         <nav className="flex gap-7 text-[15px] font-semibold max-[720px]:hidden">
+          {loggedIn &&
+            appLinks.map((l) => (
+              <Link key={l.label} to={l.href} className="hover:text-marigold">
+                {l.label}
+              </Link>
+            ))}
           {!search &&
             links.map((l) => (
-              <a
+              <Link
                 key={l.label}
-                href={l.href}
+                to={l.href}
                 className={`hover:text-marigold ${dark ? 'text-paper/82' : ''}`}
               >
                 {l.label}
-              </a>
+              </Link>
             ))}
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-4.5">
-          {search ? (
+          {loggedIn ? (
             <>
+              <Link
+                to="/wishlist"
+                className="inline-flex items-center gap-1.5 text-[14.5px] font-bold text-ink hover:text-brick"
+              >
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path
+                    d="M10 17s-6.5-3.9-6.5-8.6A3.6 3.6 0 0 1 10 6.1a3.6 3.6 0 0 1 6.5 2.3C16.5 13.1 10 17 10 17Z"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Wishlist{savedCount ? ` (${savedCount})` : ''}
+              </Link>
               <button type="button" aria-label="Cart" className="relative inline-flex cursor-pointer border-0 bg-none p-1 text-ink">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                   <path
@@ -69,22 +139,30 @@ export default function Navbar({ variant = 'light', search = false, cartCount = 
                   </span>
                 )}
               </button>
-              <a
-                href="/profile"
+              <Link
+                to="/profile"
                 aria-label="Profile"
                 className="inline-flex h-8.5 w-8.5 items-center justify-center rounded-full bg-marigold text-sm font-extrabold text-ink"
               >
-                A
-              </a>
+                {user.name?.[0]?.toUpperCase() || '?'}
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="cursor-pointer border-0 bg-transparent p-0 text-[14.5px] font-bold text-ink-soft hover:text-ink disabled:opacity-60"
+              >
+                {loggingOut ? 'Logging out…' : 'Logout'}
+              </button>
             </>
           ) : (
             <>
-              <a href="/login" className={`text-[15px] font-bold ${dark ? 'text-paper' : ''}`}>
+              <Link to="/login" className={`text-[15px] font-bold ${dark ? 'text-paper' : ''}`}>
                 Log in
-              </a>
-              <a href="/signup" className="btn btn-primary">
+              </Link>
+              <Link to="/signup" className="btn btn-primary">
                 Sign up
-              </a>
+              </Link>
             </>
           )}
         </div>
