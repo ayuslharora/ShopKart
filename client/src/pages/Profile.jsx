@@ -5,12 +5,14 @@ import Footer from '../components/Footer'
 import Loading from '../components/Loading'
 import { useAuth } from '../context/AuthContext'
 import { axiosInstance } from '../axiosCalls/axios'
+import { formatPrice } from '../utils/formatPrice'
+import { formatOrderDate } from '../utils/orderFormat'
 
 const statusStyles = {
-  pending: 'text-marigold',
-  shipped: 'text-ink',
-  delivered: 'text-leaf',
-  cancelled: 'text-brick',
+  PLACED: 'text-marigold-dim',
+  CONFIRMED: 'text-ink',
+  SHIPPED: 'text-ink',
+  DELIVERED: 'text-leaf',
 }
 
 function ProductStrip({ items, empty, renderMeta }) {
@@ -89,7 +91,7 @@ export default function Profile() {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <Navbar variant="light" search cartCount={3} />
+      <Navbar variant="light" search />
 
       <main className="wrap flex-1 py-14">
         <div className="mx-auto max-w-[900px]">
@@ -129,7 +131,9 @@ export default function Profile() {
               <section className="mt-14">
                 <div className="mb-4 flex items-baseline justify-between">
                   <h2 className="text-[20px]">Your orders</h2>
-                  <span className="text-[13px] text-ink-soft">{overview?.orderCount ?? 0} total</span>
+                  <Link to="/orders" className="text-[13px] font-bold text-ink-soft hover:text-ink">
+                    View all ({overview?.orderCount ?? 0}) →
+                  </Link>
                 </div>
 
                 {overview?.recentOrders?.length ? (
@@ -137,25 +141,31 @@ export default function Profile() {
                     {overview.recentOrders.map((order) => (
                       <Link
                         key={order._id}
-                        to={`/products/${order.product?._id}`}
+                        to={`/orders/${order._id}`}
                         className="flex items-center justify-between gap-4 rounded-xl border-[1.5px] border-line-strong bg-cream p-4 transition-colors hover:border-line-strong"
                       >
                         <div className="flex items-center gap-3.5">
                           <div
                             className="h-14 w-14 shrink-0 rounded-lg bg-cover bg-center bg-paper-2"
-                            style={order.product?.imageUrl ? { backgroundImage: `url(${order.product.imageUrl})` } : undefined}
+                            style={order.items[0]?.image ? { backgroundImage: `url(${order.items[0].image})` } : undefined}
                           />
                           <div>
-                            <p className="text-[14.5px] font-semibold">{order.product?.name || 'Product removed'}</p>
+                            <p className="text-[14.5px] font-semibold">
+                              {order.items[0]?.name}
+                              {order.items.length > 1 && (
+                                <span className="font-normal text-ink-soft"> + {order.items.length - 1} more</span>
+                              )}
+                            </p>
                             <p className="mt-0.5 text-[12.5px] text-ink-soft">
-                              {new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                              {' · '}Qty {order.quantity}
+                              {formatOrderDate(order.createdAt)}
+                              {' · '}
+                              {order.items.reduce((sum, item) => sum + item.quantity, 0)} items
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-[14.5px] font-extrabold">₹{order.priceAtPurchase}</p>
-                          <p className={`mt-0.5 text-[12.5px] font-semibold capitalize ${statusStyles[order.status] || ''}`}>
+                          <p className="text-[14.5px] font-extrabold">{formatPrice(order.totalAmount)}</p>
+                          <p className={`mt-0.5 text-[12.5px] font-semibold ${statusStyles[order.status] || ''}`}>
                             {order.status}
                           </p>
                         </div>

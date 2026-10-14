@@ -277,3 +277,203 @@ user always comes from the JWT cookie, never from the request):
   links switched from `<a href>` to React Router `<Link>`, so navigating no
   longer reloads the page.
 - **`App.jsx`** — added the `/wishlist` route.
+
+---
+
+# Lab 5 — Shopping Cart
+
+Built against the Lab-05 (Shopping Cart) problem statement. This is the
+first feature that uses global frontend state (Context API).
+
+## Backend
+
+**`server/models/Users.model.js`** — added
+`cart: [{ product: ObjectId ref Product (required), quantity: Number (default 1, min 1) }]`,
+default `[]`. Only the product reference and quantity are stored — price,
+name and stock always come from the Product via `populate()`, so a price
+change shows up in every cart immediately. Subtotal and counts are never
+stored.
+
+**`server/controllers/cart.controller.js`** + **`routes/cart.route.js`**
+(mounted at `/cart`, all behind `isAuthenticated`). Every success response
+is `{ success, message, cart }` with the populated cart, so the frontend can
+replace its copy with the server's.
+
+| Method | Endpoint | Behaviour | Errors |
+|---|---|---|---|
+| POST | `/cart/:productId` | Not in cart → add with qty 1; in cart → +1 | 400 bad id / out of stock / would exceed stock, 404 no product |
+| GET | `/cart` | Populated cart | 401 |
+| PATCH | `/cart/:productId` `{ quantity }` | Set quantity | 400 bad id / not a whole number / < 1 / > stock, 404 no product / not in cart |
+| DELETE | `/cart/:productId` | Remove item | 400 bad id, 404 not in cart |
+
+- **No duplicate rows, no going over stock — even with fast double clicks.**
+  "Add" first tries `$inc` on the existing row with the stock check inside
+  the filter (`cart: { $elemMatch: { product, quantity: { $lt: stock } } }`);
+  if that matches nothing it tries `$push` with a `'cart.product': { $ne }`
+  filter; if *that* matches nothing, another request created the row a
+  moment ago, so it retries the `$inc` once. Tested: 3 simultaneous adds →
+  quantity 3; 10 simultaneous adds from 3 with stock 10 → stops at exactly 10.
+- Same `matchedCount` (not `modifiedCount`) rule as the wishlist, because
+  `timestamps: true` makes every update count as a modification.
+
+## Frontend
+
+- **`context/CartContext.jsx`** (`CartProvider`, wraps the app in
+  `main.jsx` inside `AuthProvider`) + **`context/useCart.js`** (the context
+  object and `useCart()` hook, in a separate file so Fast Refresh keeps
+  working). Exposes `cartItems`, `loading`, `error`, `addToCart`,
+  `updateQuantity`, `removeFromCart`, `refreshCart`, plus per-item
+  `isPending(id)` and `quantityInCart(id)`.
+  - Fetches `GET /cart` once when a user logs in. Each mutation replaces
+    `cartItems` with the cart the server sends back — one source of truth.
+  - **Derived values:** `totalUnits` (Σ quantity) and `subtotal`
+    (Σ price × quantity) are calculated from `cartItems` on every render.
+  - Tracks which user the loaded cart belongs to (`ownerId`), so after
+    logout, or another user logging in, the previous user's cart is never
+    shown.
+- **Navbar** — `Cart (N)` link to `/cart`, N = total units from the
+  context. The hardcoded `cartCount={3}` was removed from every page.
+- **`ProductCard`** — Add to Cart → Adding... → Add Another, with
+  "N in cart" underneath. Disabled as "Out of Stock" or "Max in Cart" when
+  stock is used up. Server errors (e.g. stock) are shown on the card.
+- **`ProductDetail`** — Add to Cart button next to Buy now.
+- **`pages/Cart.jsx`** (private route `/cart`) + **`components/CartItem.jsx`**
+  - Each item: image, name, unit price, `[−] qty [+]`, line total, Remove.
+    `+` is disabled at stock, `−` at 1 (use Remove instead). Only the item
+    being changed shows "Updating...".
+  - If stock dropped below what's in the cart, the item says "Only N left"
+    and Proceed to Checkout is disabled until it's fixed.
+  - Order Summary: Items (total units), Subtotal, Proceed to Checkout
+    (placeholder until Lab 6).
+  - Loading ("Loading your cart..."), empty ("Your cart is empty 🛒" +
+    Browse Products) and error ("Unable to load your cart." + Try Again)
+    states.
+- **`utils/formatPrice.js`** — `₹5,998` style formatting for cart prices.
+
+---
+
+# Lab 6 — Checkout & Orders (Razorpay Test Mode)
+
+Built against the Lab-06 (Checkout and Orders) problem statement. Before
+starting, Lab 5 was re-checked against its acceptance criteria — nothing
+was missing. (The only difference from the spec's examples is that the
+populated cart product uses this project's `imageUrl` field instead of
+`image`.)
+
+## Backend
+
+**`server/models/Order.model.js`** — replaced. The old model was one
+product per order (`buyer`, `product`, `seller`, `priceAtPurchase`), created
+by "Buy now" without any payment. The new one follows the lab:
+`user`, `items[]`, `shippingAddress`, `totalAmount`, `paymentStatus`
+(`PENDING | PAID | FAILED`), `status` (`PENDING_PAYMENT | PLACED |
+CONFIRMED | SHIPPED | DELIVERED`), `razorpayOrderId`, `razorpayPaymentId`,
+timestamps. Each item is a **snapshot** — `product` (ref, for linking back),
+`name`, `price`, `quantity`, `image` — so a later price change or deleted
+product never rewrites order history (tested: changing the product price
+afterwards leaves the order at the old price).
+
+**`server/config/razorpay.js`** — `getRazorpay()` creates the client on first
+use instead of at import time. `index.js` loads `.env` *after* its imports
+run, and `new Razorpay()` throws without a key id, so an eager instance
+would crash the server whenever the keys weren't set. With no keys the
+payment endpoints answer `503` instead.
+
+**`server/controllers/order.controller.js`** + **`routes/order.route.js`**
+(all behind `isAuthenticated`):
+
+| Method | Endpoint | Behaviour |
+|---|---|---|
+| POST | `/orders/create-payment-order` | Body: `{ shippingAddress }` only. Validates address → loads cart → rejects empty cart / deleted / inactive / over-stock products → snapshots items at current prices → total calculated on the server → saves `PENDING_PAYMENT` order → creates Razorpay order (amount × 100 = paise, `receipt` = our order id) → returns `{ shopKartOrderId, razorpayOrderId, amount, currency, key }` (key **id** only). Cart is not touched. |
+| POST | `/orders/verify-payment` | HMAC-SHA256 of `"<stored razorpayOrderId>|<payment_id>"` with the secret, compared with `timingSafeEqual`. Invalid → `400 Invalid payment signature`, order stays `PENDING`, cart kept. Valid → `PAID` + `PLACED` + payment id, stock reduced, cart emptied, order returned. |
+| GET | `/orders` | `{ success, count, orders }` — the caller's **paid** orders, newest first. |
+| GET | `/orders/:id` | Caller's order only; someone else's id → `404` (doesn't reveal it exists). Bad id → `400`. |
+| PATCH | `/orders/:id/status` | **Bonus**, dev only (`404` when `NODE_ENV=production`). `{ status }` moves a paid order exactly one step: PLACED → CONFIRMED → SHIPPED → DELIVERED. Own orders only, since there's no admin role yet. |
+
+Details worth knowing:
+
+- **Nothing price-related is read from the request.** A body with
+  `totalAmount: 1` or fake `items` is ignored (tested: Razorpay amount was
+  still 749700 for ₹7,497).
+- **The browser's Razorpay order id isn't trusted.** The signature is
+  checked against the id we stored when creating the order, so a valid
+  signature for a different (cheaper) Razorpay order fails (tested).
+- **Verification is idempotent and race-safe.** `PENDING → PAID` is a single
+  `findOneAndUpdate` filtered on `paymentStatus != PAID`, so two verify
+  requests for the same payment both return 200 but stock is reduced and
+  the cart cleared only once (tested with two concurrent requests).
+- **Stock is reduced on payment** (not in the lab text, but without it the
+  final stock check never means anything). It's clamped at 0 with a
+  pipeline update: if someone else bought the last unit between "Place
+  Order" and payment, the customer has already paid, so the payment isn't
+  rejected.
+- **Deleted products:** the cart page hides cart rows whose product was
+  deleted, so the user couldn't remove them. Checkout rejects the order,
+  removes those dead rows from the cart, and asks the user to review it.
+  The next attempt then works.
+- If Razorpay rejects the order (bad keys, outage), the pending ShopKart
+  order is deleted and `502` returned. The cart is untouched.
+- Abandoned or failed payments leave a `PENDING_PAYMENT` order in MongoDB,
+  but `GET /orders` and the profile only show paid ones.
+- Shipping validation (same rules on the client): every field required and
+  trimmed (whitespace-only is empty); phone accepts `98765 43210`,
+  `+91 98765-43210`, `098…` and is stored as 10 digits starting 6–9;
+  pincode must be exactly 6 digits ("Pincode must contain 6 digits.").
+  Errors come back as `{ message, errors: { field: msg } }`.
+- `GET /users/profile-overview` now counts and lists paid orders from the
+  new model.
+- Old orders created before this lab (old `buyer`/`product` shape) are no
+  longer shown anywhere.
+
+## Frontend
+
+- **`pages/Checkout.jsx`** (`/checkout`, from the Cart page's Proceed to
+  Checkout) — `components/CheckoutForm.jsx` shipping form (prefilled name,
+  field-level errors) + order summary (`Item × qty  ₹line`, Items, Total).
+  Client validation runs first and **no request is made** if it fails.
+  The Place Order button walks through `Creating order...` →
+  `Waiting for payment...` → `Verifying payment...`.
+  - The Razorpay script is loaded (`utils/loadRazorpay.js`, once, and it
+    handles load failure) *before* asking the server for an order, so a
+    blocked script doesn't leave a pending order behind.
+  - Razorpay's `handler` only forwards the response to
+    `/orders/verify-payment`; on success → `/order-success/:id`, then
+    `clearCart()` (new on the cart context) → navbar shows `Cart (0)` with
+    no refresh.
+  - `payment.failed` is remembered (Razorpay keeps its window open for a
+    retry) and shown when the window closes: "Payment failed: … Your cart
+    has not been cleared. Please try again." Closing without paying shows
+    "Payment cancelled…".
+  - Server errors (stock, removed product) are shown and the cart context
+    is refreshed so stock warnings are up to date. Loading / error / empty
+    cart states. Opening `/checkout` with an empty cart shows "Your cart is
+    empty" + Browse Products.
+- **`pages/OrderSuccess.jsx`** (`/order-success/:id`) — ✅ Order Placed
+  Successfully, Order ID, Total, Status, View My Orders / Continue Shopping.
+  It reads the order from the server, so it survives a refresh and won't
+  show success for an unpaid order.
+- **`pages/Orders.jsx`** (`/orders`) + **`components/OrderCard.jsx`** —
+  order #, date, item lines (first 3 + "N more"), total, status tracker,
+  View Details. Loading / error (Try Again) / empty ("You have not placed
+  any orders yet." + Start Shopping) states.
+- **`pages/OrderDetails.jsx`** (`/orders/:id`) — status tracker, items at
+  their purchase-time prices, shipping address, payment status + payment id.
+- **`components/OrderStatusTracker.jsx`** (bonus) — PLACED → CONFIRMED →
+  SHIPPED → DELIVERED progress, used on the cards and the details page.
+- **Navbar** — added `Orders`. **Profile** — "Your orders" uses the new
+  shape and links to `/orders/:id`, plus "View all".
+- **`ProductDetail`** — "Buy now" used to create an unpaid order directly.
+  It now adds the product to the cart (if it isn't already there) and goes
+  to `/checkout`, so every order goes through payment.
+
+## Setup
+
+`npm install` in `server/` (adds `razorpay`), then in `server/.env`:
+
+```env
+RAZORPAY_KEY_ID=rzp_test_xxxxxxxxx
+RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxx
+```
+
+Test Mode keys only. `.env` is already gitignored; the secret never leaves
+the server.

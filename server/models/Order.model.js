@@ -1,47 +1,75 @@
 import mongoose from "mongoose"
 
-const orderScheme = mongoose.Schema(
+export const ORDER_STATUSES = ["PENDING_PAYMENT", "PLACED", "CONFIRMED", "SHIPPED", "DELIVERED"]
+
+// Each item is a snapshot of the product at purchase time. `product` is kept so the
+// order can link back to the product page, but name/price/image are copied in, so a
+// later price change or a deleted product never rewrites order history.
+const orderItemScheme = mongoose.Schema(
     {
-        buyer: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            required: [true, "Order must belong to a buyer"],
-        },
         product: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Product",
-            required: [true, "Order must reference a product"],
+            required: true,
         },
-        seller: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Seller",
-            required: [true, "Order must reference a seller"],
+        name: {
+            type: String,
+            required: true,
+        },
+        price: {
+            type: Number,
+            required: true,
+            min: [0, "Price cannot be negative"],
         },
         quantity: {
             type: Number,
-            required: [true, "Quantity is required"],
+            required: true,
             min: [1, "Quantity must be at least 1"],
-            default: 1,
         },
-        priceAtPurchase: {
+        image: {
+            type: String,
+        },
+    },
+    { _id: false }
+)
+
+const orderScheme = mongoose.Schema(
+    {
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: [true, "Order must belong to a user"],
+            index: true,
+        },
+        items: {
+            type: [orderItemScheme],
+            validate: [(items) => items.length > 0, "Order must have at least one item"],
+        },
+        shippingAddress: {
+            fullName: { type: String, required: true, trim: true },
+            phone: { type: String, required: true, trim: true },
+            addressLine1: { type: String, required: true, trim: true },
+            city: { type: String, required: true, trim: true },
+            state: { type: String, required: true, trim: true },
+            pincode: { type: String, required: true, trim: true },
+        },
+        totalAmount: {
             type: Number,
-            required: [true, "Price at purchase is required"],
-            min: [0, "Price cannot be negative"],
+            required: true,
+            min: [0, "Total cannot be negative"],
+        },
+        paymentStatus: {
+            type: String,
+            enum: ["PENDING", "PAID", "FAILED"],
+            default: "PENDING",
         },
         status: {
             type: String,
-            enum: {
-                values: ["pending", "shipped", "delivered", "cancelled"],
-                message: "Status must be one of: pending, shipped, delivered, cancelled",
-            },
-            default: "pending",
+            enum: ORDER_STATUSES,
+            default: "PENDING_PAYMENT",
         },
-        shippingAddress: {
-            street: { type: String, trim: true },
-            city: { type: String, trim: true },
-            state: { type: String, trim: true },
-            pincode: { type: String, trim: true },
-        },
+        razorpayOrderId: String,
+        razorpayPaymentId: String,
     },
     { timestamps: true }
 )

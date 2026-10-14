@@ -8,7 +8,7 @@ export default function Home() {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <Navbar variant="light" search cartCount={3} />
+      <Navbar variant="light" search />
 
       <main className="wrap flex flex-1 items-center py-20">
         <div className="w-full max-w-[520px]">

@@ -16,7 +16,7 @@ export const registerUser = async (req,res)=>{
         const {name,username,email, password} = req.body
 
         if(!name||!username||!email||!password){
-            res.status(400).send({message:"all fields are required"})
+            return res.status(400).send({message:"all fields are required"})
         }
 
         if (password.length <= 6) {
@@ -24,8 +24,6 @@ export const registerUser = async (req,res)=>{
         }
 
         const userExists = await User.findOne({username})
-
-        console.log(userExists)
 
         if(userExists){
             return res.status(400).json({message:"User already exists"})
@@ -61,6 +59,14 @@ export const registerUser = async (req,res)=>{
 
     }
     catch(err){
+        // Schema rules (username format/length, name length…) — tell the user which one failed
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({ message: Object.values(err.errors)[0].message })
+        }
+        // Unique index hit (e.g. two signups racing past the findOne checks)
+        if (err.code === 11000) {
+            return res.status(400).json({ message: `${Object.keys(err.keyValue)[0]} already in use` })
+        }
         res.status(500).json({ message: 'Server crashed', error: err.message })
     }
 }
@@ -115,11 +121,10 @@ export const getProfileOverview = async (req, res) => {
         const userId = req.user._id
 
         const [orderCount, recentOrders, userWithLists] = await Promise.all([
-            Order.countDocuments({ buyer: userId }),
-            Order.find({ buyer: userId })
+            Order.countDocuments({ user: userId, paymentStatus: 'PAID' }),
+            Order.find({ user: userId, paymentStatus: 'PAID' })
                 .sort({ createdAt: -1 })
-                .limit(RECENT_ORDERS_LIMIT)
-                .populate('product', 'name imageUrl price'),
+                .limit(RECENT_ORDERS_LIMIT),
             User.findById(userId)
                 .select('wishlist recentlyViewed')
                 .populate('wishlist', 'name imageUrl price category')

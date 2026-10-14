@@ -4,8 +4,6 @@ import '../models/Seller.model.js'
 
 const RECENTLY_VIEWED_LIMIT = 10
 
-const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
 export const createProduct = async (req, res) => {
     try {
         const { name, description, price, category, stock, seller } = req.body
@@ -34,17 +32,19 @@ export const createProduct = async (req, res) => {
 export const getProducts = async (req, res) => {
     try {
         const { search, category } = req.query
-        const filter = { isActive: true }
 
-        if (search) {
-            filter.name = { $regex: escapeRegex(search), $options: 'i' }
-        }
+        let products = await Product.find({ isActive: true }).sort({ createdAt: -1 })
 
         if (category) {
-            filter.category = { $regex: `^${escapeRegex(category)}$`, $options: 'i' }
+            const categoryLower = category.toLowerCase()
+            products = products.filter((p) => p.category.toLowerCase() === categoryLower)
         }
 
-        const products = await Product.find(filter).sort({ createdAt: -1 })
+        if (search) {
+            const searchLower = search.toLowerCase()
+            products = products.filter((p) => p.name.toLowerCase().includes(searchLower))
+        }
+
         res.status(200).json(products)
     } catch (err) {
         res.status(500).json({ message: 'Server crashed', error: err.message })

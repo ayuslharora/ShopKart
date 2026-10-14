@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import Logo from './Logo'
 import { axiosInstance } from '../axiosCalls/axios'
 import { useAuth } from '../context/AuthContext'
+import { useCart } from '../context/useCart'
 
 const links = [
   { label: 'Shop', href: '/products' },
@@ -13,18 +14,19 @@ const links = [
 const appLinks = [
   { label: 'Home', href: '/home' },
   { label: 'Products', href: '/products' },
+  { label: 'Orders', href: '/orders' },
 ]
 
 export default function Navbar({
   variant = 'light',
   search = false,
-  cartCount = 0,
   wishlistCount,
   searchValue,
   onSearchChange,
 }) {
   const dark = variant === 'dark'
   const { user, setUser } = useAuth()
+  const { totalUnits } = useCart()
   const navigate = useNavigate()
   const [fetchedWishlistCount, setFetchedWishlistCount] = useState(null)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -121,8 +123,11 @@ export default function Navbar({
                 </svg>
                 Wishlist{savedCount ? ` (${savedCount})` : ''}
               </Link>
-              <button type="button" aria-label="Cart" className="relative inline-flex cursor-pointer border-0 bg-none p-1 text-ink">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <Link
+                to="/cart"
+                className="inline-flex items-center gap-1.5 text-[14.5px] font-bold text-ink hover:text-marigold-dim"
+              >
+                <svg width="19" height="19" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                   <path
                     d="M2 3h2l1.6 9.6a2 2 0 0 0 2 1.7h6.8a2 2 0 0 0 2-1.6L18 6H5"
                     stroke="currentColor"
@@ -133,12 +138,8 @@ export default function Navbar({
                   <circle cx="8" cy="17" r="1.3" fill="currentColor" />
                   <circle cx="15" cy="17" r="1.3" fill="currentColor" />
                 </svg>
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1.5 min-w-4 rounded-full bg-brick px-1.5 py-0.5 text-center text-[10.5px] leading-none font-extrabold text-cream">
-                    {cartCount}
-                  </span>
-                )}
-              </button>
+                Cart ({totalUnits})
+              </Link>
               <Link
                 to="/profile"
                 aria-label="Profile"

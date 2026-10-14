@@ -92,7 +92,6 @@ export default function Products() {
       <Navbar
         variant="light"
         search
-        cartCount={3}
         wishlistCount={wishlistIds.size}
         searchValue={search}
         onSearchChange={setSearch}

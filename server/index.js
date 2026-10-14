@@ -5,6 +5,7 @@ import userRoutes from './routes/user.route.js'
 import productRoutes from './routes/product.route.js'
 import orderRoutes from './routes/order.route.js'
 import wishlistRoutes from './routes/wishlist.route.js'
+import cartRoutes from './routes/cart.route.js'
 import cookieParser from "cookie-parser"
 import cors from 'cors'
 
@@ -35,6 +36,7 @@ app.use('/users', userRoutes)
 app.use('/products', productRoutes)
 app.use('/orders', orderRoutes)
 app.use('/wishlist', wishlistRoutes)
+app.use('/cart', cartRoutes)
 
 
 app.get('/', (req, res) => {

@@ -5,18 +5,20 @@ import Footer from '../components/Footer'
 import Loading from '../components/Loading'
 import { axiosInstance } from '../axiosCalls/axios'
 import { useAuth } from '../context/AuthContext'
+import { useCart } from '../context/useCart'
 
 export default function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { addToCart, isPending, quantityInCart } = useCart()
 
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [wishlisted, setWishlisted] = useState(false)
   const [savingWishlist, setSavingWishlist] = useState(false)
-  const [placingOrder, setPlacingOrder] = useState(false)
+  const [buyingNow, setBuyingNow] = useState(false)
   const [message, setMessage] = useState('')
 
   useEffect(() => {
@@ -75,21 +77,39 @@ export default function ProductDetail() {
     }
   }
 
+  const handleAddToCart = async () => {
+    if (!user) {
+      navigate('/login')
+      return
+    }
+    setMessage('')
+    try {
+      await addToCart(id)
+      setMessage('Added to your cart.')
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Could not add to cart. Try again.')
+    }
+  }
+
+  // Orders are only created through checkout (so they get paid for), so Buy now
+  // puts the product in the cart if it isn't there yet and goes straight to checkout.
   const handleBuyNow = async () => {
     if (!user) {
       navigate('/login')
       return
     }
-    setPlacingOrder(true)
     setMessage('')
-    try {
-      await axiosInstance.post('/orders', { productId: id, quantity: 1 })
-      setMessage('Order placed! Check your profile for order history.')
-    } catch (error) {
-      setMessage(error.response?.data?.message || 'Could not place the order. Try again.')
-    } finally {
-      setPlacingOrder(false)
+    if (quantityInCart(id) === 0) {
+      setBuyingNow(true)
+      try {
+        await addToCart(id)
+      } catch (error) {
+        setMessage(error.response?.data?.message || 'Could not add to cart. Try again.')
+        setBuyingNow(false)
+        return
+      }
     }
+    navigate('/checkout')
   }
 
   if (loading) return <Loading />
@@ -97,7 +117,7 @@ export default function ProductDetail() {
   if (notFound) {
     return (
       <div className="flex min-h-svh flex-col">
-        <Navbar variant="light" search cartCount={3} />
+        <Navbar variant="light" search />
         <main className="wrap flex flex-1 items-center justify-center py-20">
           <p className="text-[16px] text-ink-soft">This product doesn't exist or was removed.</p>
         </main>
@@ -108,7 +128,7 @@ export default function ProductDetail() {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <Navbar variant="light" search cartCount={3} />
+      <Navbar variant="light" search />
 
       <main className="wrap grid grid-cols-2 gap-12 py-14 max-[860px]:grid-cols-1">
         {product.imageUrl ? (
@@ -141,14 +161,26 @@ export default function ProductDetail() {
 
           {message && <p className="mt-4 text-[14px] font-medium text-ink">{message}</p>}
 
-          <div className="mt-7 flex gap-3.5">
+          {quantityInCart(id) > 0 && (
+            <p className="mt-2 text-[13.5px] font-semibold text-leaf">{quantityInCart(id)} in your cart</p>
+          )}
+
+          <div className="mt-7 flex flex-wrap gap-3.5">
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              disabled={isPending(id) || product.stock === 0 || quantityInCart(id) >= product.stock}
+              className="btn btn-outline disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              {isPending(id) ? 'Adding...' : quantityInCart(id) > 0 ? 'Add Another' : 'Add to Cart'}
+            </button>
             <button
               type="button"
               onClick={handleBuyNow}
-              disabled={placingOrder || product.stock === 0}
+              disabled={buyingNow || product.stock === 0}
               className="btn btn-primary disabled:opacity-60"
             >
-              {placingOrder ? 'Placing order…' : 'Buy now'}
+              {buyingNow ? 'Adding to cart…' : 'Buy now'}
             </button>
             <button
               type="button"

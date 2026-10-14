@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo'
 import { axiosInstance } from '../axiosCalls/axios'
+import { useAuth } from '../context/AuthContext'
 
 export default function Signup() {
   const [form, setForm] = useState({ name: '', username: '', email: '', password: '' })
   const [loader, setLoader] = useState(false)
   const [err, setErr] = useState('')
   const navigate = useNavigate()
+  const { setUser } = useAuth()
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -20,7 +22,10 @@ export default function Signup() {
     setErr('')
 
     try {
-      await axiosInstance.post('/users/register', form)
+      const { data } = await axiosInstance.post('/users/register', form)
+      // Register also logs the user in (sets the cookie), so tell AuthContext —
+      // otherwise /home's PrivateRoutes sees no user and bounces back to /login.
+      setUser(data.user)
       navigate('/home', { replace: true })
     } catch (error) {
       setErr(error.response?.data?.message || 'Unable to create your account. Please try again.')
@@ -67,6 +72,9 @@ export default function Signup() {
                 onChange={handleChange}
                 className="rounded-lg border-[1.5px] border-line-strong bg-cream px-3.5 py-3.5 text-[15px] text-ink outline-none placeholder:text-ink-soft placeholder:opacity-65 focus-visible:border-ink"
               />
+              <span className="text-[12.5px] text-ink-soft">
+                3–20 characters: letters, numbers, dots and underscores only
+              </span>
             </label>
 
             <label className="flex flex-col gap-1.5">

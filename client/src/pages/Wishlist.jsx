@@ -60,7 +60,7 @@ export default function Wishlist() {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <Navbar variant="light" search cartCount={3} wishlistCount={items.length} />
+      <Navbar variant="light" search wishlistCount={items.length} />
 
       <main className="wrap flex-1 pt-10 pb-18">
         <div className="mb-7">

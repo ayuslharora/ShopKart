@@ -7,6 +7,11 @@ import Profile from './pages/Profile'
 import Products from './pages/Products'
 import ProductDetail from './pages/ProductDetail'
 import Wishlist from './pages/Wishlist'
+import Cart from './pages/Cart'
+import Checkout from './pages/Checkout'
+import OrderSuccess from './pages/OrderSuccess'
+import Orders from './pages/Orders'
+import OrderDetails from './pages/OrderDetails'
 import PrivateRoutes from "./components/PrivateRoutes"
 import PublicRoutes from "./components/PublicRoutes"
 
@@ -23,6 +28,11 @@ function App() {
       <Route path="/products" element={<PrivateRoutes><Products /></PrivateRoutes>} />
       <Route path="/products/:id" element={<ProductDetail />} />
       <Route path="/wishlist" element={<PrivateRoutes><Wishlist /></PrivateRoutes>} />
+      <Route path="/cart" element={<PrivateRoutes><Cart /></PrivateRoutes>} />
+      <Route path="/checkout" element={<PrivateRoutes><Checkout /></PrivateRoutes>} />
+      <Route path="/order-success/:id" element={<PrivateRoutes><OrderSuccess /></PrivateRoutes>} />
+      <Route path="/orders" element={<PrivateRoutes><Orders /></PrivateRoutes>} />
+      <Route path="/orders/:id" element={<PrivateRoutes><OrderDetails /></PrivateRoutes>} />
     </Routes>
   </BrowserRouter>
 }

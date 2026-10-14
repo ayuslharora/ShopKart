@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { useCart } from '../context/useCart'
 
 const tones = ['marigold', 'leaf', 'brick', 'ink']
 
@@ -12,8 +14,8 @@ const toneStyles = {
 
 const toneFor = (id = '') => tones[[...id].reduce((sum, c) => sum + c.charCodeAt(0), 0) % tones.length]
 
-// The wishlist button only renders when the page passes onToggleWishlist,
-// so public pages (Landing) keep the plain card.
+// The wishlist button only renders when the page passes onToggleWishlist, and the
+// cart button only for logged-in users, so guests on Landing get the plain card.
 export default function ProductCard({
   _id,
   name,
@@ -29,6 +31,28 @@ export default function ProductCard({
   const tone = toneFor(_id || name)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const { user } = useAuth()
+  const { addToCart, isPending, quantityInCart } = useCart()
+  const [cartError, setCartError] = useState('')
+
+  const adding = isPending(_id)
+  const inCart = quantityInCart(_id)
+  const atStockLimit = stock !== undefined && inCart >= stock
+
+  const handleAddToCart = async () => {
+    if (adding) return
+    setCartError('')
+    try {
+      await addToCart(_id)
+    } catch (err) {
+      setCartError(err.response?.data?.message || 'Unable to add to cart. Please try again.')
+    }
+  }
+
+  let cartLabel = inCart > 0 ? 'Add Another' : 'Add to Cart'
+  if (adding) cartLabel = 'Adding...'
+  else if (stock === 0) cartLabel = 'Out of Stock'
+  else if (atStockLimit) cartLabel = 'Max in Cart'
 
   const handleWishlist = async () => {
     if (saving) return
@@ -79,23 +103,39 @@ export default function ProductCard({
         </div>
       </Link>
 
-      {onToggleWishlist && (
-        <div className="mt-auto px-4 pb-4">
-          <button
-            type="button"
-            onClick={handleWishlist}
-            disabled={saving}
-            aria-pressed={wishlisted}
-            title={wishlisted ? 'Click to remove from wishlist' : undefined}
-            className={`w-full rounded-lg border-[1.5px] px-3 py-2 text-[13.5px] font-bold transition-colors disabled:opacity-60 ${
-              wishlisted
-                ? 'border-brick bg-brick/8 text-brick hover:bg-brick/15'
-                : 'border-line-strong bg-paper text-ink hover:border-ink'
-            }`}
-          >
-            {wishlistLabel}
-          </button>
-          {error && <p className="mt-2 text-[12.5px] font-medium text-brick">{error}</p>}
+      {(user || onToggleWishlist) && (
+        <div className="mt-auto flex flex-col gap-2 px-4 pb-4">
+          {user && (
+            <>
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={adding || stock === 0 || atStockLimit}
+                className="w-full rounded-lg bg-ink px-3 py-2 text-[13.5px] font-bold text-paper transition-colors hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-55"
+              >
+                {cartLabel}
+              </button>
+              {inCart > 0 && <p className="text-center text-[12px] font-semibold text-leaf">{inCart} in cart</p>}
+              {cartError && <p className="text-[12.5px] font-medium text-brick">{cartError}</p>}
+            </>
+          )}
+          {onToggleWishlist && (
+            <button
+              type="button"
+              onClick={handleWishlist}
+              disabled={saving}
+              aria-pressed={wishlisted}
+              title={wishlisted ? 'Click to remove from wishlist' : undefined}
+              className={`w-full rounded-lg border-[1.5px] px-3 py-2 text-[13.5px] font-bold transition-colors disabled:opacity-60 ${
+                wishlisted
+                  ? 'border-brick bg-brick/8 text-brick hover:bg-brick/15'
+                  : 'border-line-strong bg-paper text-ink hover:border-ink'
+              }`}
+            >
+              {wishlistLabel}
+            </button>
+          )}
+          {error && <p className="text-[12.5px] font-medium text-brick">{error}</p>}
         </div>
       )}
     </div>
