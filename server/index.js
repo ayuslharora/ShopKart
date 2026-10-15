@@ -11,9 +11,9 @@ import cors from 'cors'
 
 const app = express();
 
-const PORT = 8000
-
 dotenv.config();
+
+const PORT = process.env.PORT || 8000
 
 mongoose.connect(process.env.DBUrl).then(() => {
     console.log("DB Connected");
@@ -23,8 +23,9 @@ mongoose.connect(process.env.DBUrl).then(() => {
 
 app.use(cors(
     {
-        // any localhost port (Vite picks 5173, 5174, ... depending on what's free)
-        origin: /^http:\/\/localhost:\d+$/,
+        // any localhost port (Vite picks 5173, 5174, ... depending on what's free),
+        // plus the deployed frontend when CLIENT_URL is set
+        origin: [/^http:\/\/localhost:\d+$/, process.env.CLIENT_URL].filter(Boolean),
         credentials: true,
     }
 ))

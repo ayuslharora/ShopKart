@@ -5,9 +5,15 @@ import {genToken} from '../util/genToken.js'
 
 const RECENT_ORDERS_LIMIT = 5
 
+const isProd = process.env.NODE_ENV === 'production'
+
 const cookieOptions = {
     //what does this means
-    httpOnly : true
+    httpOnly : true,
+    // the deployed client and API live on different domains, so the browser
+    // only sends the cookie back if it's SameSite=None (which requires Secure)
+    secure : isProd,
+    sameSite : isProd ? 'none' : 'lax',
 }
 
 
